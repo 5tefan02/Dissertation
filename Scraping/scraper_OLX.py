@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import os
 
 rezultate = []
 links = []
@@ -38,7 +39,6 @@ for link in links:
                 an_constructie = text.split(':',1)[1].strip()
             elif text.startswith('Compartimentare'):
                 compartimentare = text.split(':',1)[1].strip()
-        #an_constructie = elemente.pop(3).text.strip()
 
         pret = soup.find('h3', class_='css-1j840l6').text.strip()
     
@@ -56,6 +56,7 @@ for link in links:
     print(judet, oras, suprafata, etaj, pret)
     
 df = pd.DataFrame(rezultate)
-df.to_csv('olx_imobiliare.csv' , index=False, encoding='utf-8-sig')
-print("Scraping completed and data saved to olx_imobiliare.csv")
+csv_path = os.path.join(".", "Data", "raw_data.csv")
+df.to_csv(csv_path , index=False, encoding='utf-8-sig')
+print("Scraping completed and data saved to raw_data.csv")
  
