@@ -14,6 +14,7 @@ class Estate(Base):
     suprafata = Column(Integer, nullable=True)
     etaj = Column(String, nullable=True)
     an_constructie = Column(String, nullable=True)
+    compartimentare = Column(String, nullable=True)
     pret = Column(Integer, nullable=False)
 
 
@@ -49,6 +50,7 @@ def insert_estates(rezultate: list[dict]):
                 suprafata=r["suprafata"],
                 etaj=r["etaj"],
                 an_constructie=r["an_constructie"],
+                compartimentare=r.get("compartimentare"),
                 pret=r["pret"],
             )
             for r in rezultate

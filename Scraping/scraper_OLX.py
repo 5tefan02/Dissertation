@@ -72,9 +72,10 @@ def scrape_olx():
             'suprafata': suprafata,
             'etaj': etaj,
             'an_constructie': an_constructie,
+            'compartimentare': compartimentare,
             'pret': pret})
 
-        print(judet, oras, suprafata, etaj, pret)
+        print(judet, oras, suprafata, etaj, compartimentare, pret)
 
     driver.quit()
     return rezultate
