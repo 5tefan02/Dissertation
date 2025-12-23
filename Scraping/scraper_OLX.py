@@ -3,9 +3,8 @@ from selenium.webdriver.firefox.service import Service
 from webdriver_manager.firefox import GeckoDriverManager
 from bs4 import BeautifulSoup
 import pandas as pd
-import os
 import time
-import pymongo 
+from datetime import datetime
 
 def scrape_olx():
     rezultate = []
@@ -21,6 +20,7 @@ def scrape_olx():
     for a in anunturi_olx:
         href = a.get("href")
         links.append("https://www.olx.ro" + href)
+    links = list(set(links))
 
     for link in links:
         try:
@@ -61,21 +61,27 @@ def scrape_olx():
                 pret = int(''.join(c for c in pret_text if c.isdigit()))
             else:
                 pret = None
+            
+            data = datetime.today().strftime('%Y-%m-%d')
+            
+            id = f"{oras}{judet}{suprafata}{etaj}{an_constructie}{pret}{data}"
 
         except Exception as e:
             print(f"An error occurred: {e}")
             continue
         
         rezultate.append({
+            'id': id,
             'judet': judet,
             'oras': oras,
             'suprafata': suprafata,
             'etaj': etaj,
             'an_constructie': an_constructie,
             'compartimentare': compartimentare,
-            'pret': pret})
+            'pret': pret,
+            'data': data})
 
-        print(judet, oras, suprafata, etaj, compartimentare, pret)
+        print(id, judet, oras, suprafata, etaj, compartimentare, pret, data)
 
     driver.quit()
     return rezultate
