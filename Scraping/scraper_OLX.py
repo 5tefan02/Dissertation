@@ -56,15 +56,12 @@ def scrape_olx():
                     compartimentare = text.split(':',1)[1].strip()
 
             pret = soup.find('h3', class_='css-1j840l6')
-            if pret:
-                pret_text = pret.text
-                pret = int(''.join(c for c in pret_text if c.isdigit()))
-            else:
-                pret = None
+            pret_text = pret.text
+            pret = int(''.join(c for c in pret_text if c.isdigit()))
             
             data = datetime.today().strftime('%Y-%m-%d')
             
-            id = f"{oras}{judet}{suprafata}{etaj}{an_constructie}{pret}{data}"
+            id = f"{oras}{judet}{pret}{data}"
 
         except Exception as e:
             print(f"An error occurred: {e}")
