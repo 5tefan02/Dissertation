@@ -9,6 +9,44 @@ from datetime import datetime
 def scrape_olx():
     rezultate = []
     links = []
+    #Keywords pentru a determina tipul tranzactiei
+    vanzare_keywords = [
+    "vanzare",
+    "de vanzare",
+    "se vinde",
+    "vand",
+    "vandut",     
+    "cumparare",
+    "achizitie",
+]
+    apartament_keywords = [
+    "apartament",
+    "ap.",
+    "apt",
+    "garsoniera",
+    "studio",
+    "penthouse",
+]
+    casa_keywords = [
+    "casa",
+    "casă",
+    "vila",
+    "vilă",
+    "duplex",
+    "triplex",
+    "townhouse",
+    "resedinta",
+    "locuinta individuala",
+]
+    teren_keywords = [
+    "teren",
+    "parcela",
+    "lot",
+    "intravilan",
+    "extravilan",
+    "agricol",
+    "constructibil",
+]
 
     driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()))
     driver.get('https://www.olx.ro/imobiliare/')
@@ -59,16 +97,46 @@ def scrape_olx():
             pret_text = pret.text
             pret = int(''.join(c for c in pret_text if c.isdigit()))
             
+            tip_tranzactie_scraping = soup.find('div', class_='css-19duwlz')
+            
+            if tip_tranzactie_scraping:
+                tip_tranzactie_text = tip_tranzactie_scraping.text.lower()
+                if any(keyword in tip_tranzactie_text for keyword in vanzare_keywords):
+                    tip_tranzactie = 'vanzare'
+                else:
+                    tip_tranzactie = 'inchiriere'
+                    
+            tip_imobiliar = soup.find('div', class_='css-19duwlz')
+            
+            tip_imobiliar_scraping = soup.find('div', class_='css-19duwlz')
+
+            if tip_imobiliar_scraping:
+                tip_imobiliar_text = tip_imobiliar_scraping.text.lower()
+            else:
+                tip_imobiliar_text = ""
+
+            if any(keyword in tip_imobiliar_text for keyword in apartament_keywords):
+                tip_imobiliar = "apartament"
+            elif any(keyword in tip_imobiliar_text for keyword in casa_keywords):
+                tip_imobiliar = "casa"
+            elif any(keyword in tip_imobiliar_text for keyword in teren_keywords):
+                tip_imobiliar = "teren"
+            else:
+                tip_imobiliar = None        
+            
+            
             data = datetime.today().strftime('%Y-%m-%d')
             
-            id = f"{oras}{judet}{pret}{data}"
+            processed = False
+            
+            id_raw = f"{oras}{judet}{pret}{data}"
 
         except Exception as e:
             print(f"An error occurred: {e}")
             continue
         
         rezultate.append({
-            'id': id,
+            'id_raw': id_raw,
             'judet': judet,
             'oras': oras,
             'suprafata': suprafata,
@@ -76,9 +144,12 @@ def scrape_olx():
             'an_constructie': an_constructie,
             'compartimentare': compartimentare,
             'pret': pret,
-            'data': data})
+            'tip_tranzactie': tip_tranzactie,
+            'tip_imobiliar': tip_imobiliar,
+            'data': data,
+            'processed': processed})
 
-        print(id, judet, oras, suprafata, etaj, compartimentare, pret, data)
+        print(id_raw, judet, oras, suprafata, etaj, compartimentare, tip_tranzactie,tip_imobiliar, pret, data)
 
     driver.quit()
     return rezultate
