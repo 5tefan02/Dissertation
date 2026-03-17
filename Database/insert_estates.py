@@ -1,41 +1,30 @@
 from Database.db_tabels import Estate
 from Database.db_manager import SessionLocal
+from sqlalchemy import text
 
 
 def insert_estates(rezultate: list[dict]):
     session = SessionLocal()
 
+    query = text("""INSERT INTO raw_data (
+            id_raw, "URL_anunt", judet, oras, suprafata, etaj, 
+            perioada_constructie, an_constructie, compartimentare, 
+            camere, tip_tranzactie, tip_imobiliar, platforma, pret, data, processed
+        ) VALUES (
+            :id_raw, :URL_anunt, :judet, :oras, :suprafata, :etaj, 
+            :perioada_constructie, :an_constructie, :compartimentare, 
+            :camere, :tip_tranzactie, :tip_imobiliar, :platforma, :pret, :data, :processed
+        )
+        ON CONFLICT (id_raw) DO NOTHING;
+    """)
+    
     try:
-        objects = [
-            Estate(
-                id_raw=r["id_raw"],
-                URL_anunt=r["URL_anunt"],
-                judet=r["judet"],
-                oras=r["oras"],
-                suprafata=r["suprafata"],
-                etaj=r["etaj"],
-                perioada_constructie=r.get("perioada_constructie"),
-                an_constructie=r["an_constructie"],
-                compartimentare=r.get("compartimentare"),
-                camere=r.get("camere"),
-                tip_tranzactie=r["tip_tranzactie"],
-                tip_imobiliar=r["tip_imobiliar"],
-                platforma=r["platforma"],
-                pret=r["pret"],
-                data=r["data"],
-                processed=r["processed"])
-            for r in rezultate
-        ]
-
-        session.add_all(objects)
+        # Executăm toată lista odată (foarte rapid)
+        session.execute(query, rezultate)
         session.commit()
-        print(f"[DB] Inserate {len(objects)} inregistrari")
-
+        print(f"[DB] Procesare finalizată. Datele noi au fost inserate, duplicatele au fost ignorate.")
     except Exception as e:
         session.rollback()
-        print("[DB] Eroare la insert:", e)
-        raise
-
+        print(f"[DB] Eroare: {e}")
     finally:
         session.close()
-        

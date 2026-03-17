@@ -34,13 +34,48 @@ def normalize_db():
             WHERE perioada_constructie IS NOT NULL AND processed = false
             ON CONFLICT (perioada_constructie) DO NOTHING;
             """,
+            
+            # 4. COMPARTIMENTARI
+            """
+            INSERT INTO compartimentari (nume_compartimentare)
+            SELECT DISTINCT compartimentare
+            FROM raw_data
+            WHERE compartimentare IS NOT NULL AND processed = false
+            ON CONFLICT (nume_compartimentare) DO NOTHING;
+            """,
+            
+            # 5. TIPURI IMOBIL
+            """
+            INSERT INTO tipuri_imobil (nume_tip)
+            SELECT DISTINCT tip_imobiliar
+            FROM raw_data
+            WHERE tip_imobiliar IS NOT NULL AND processed = false
+            ON CONFLICT (nume_tip) DO NOTHING;
+            """,
+            
+              # 6. TIPURI TRANZACTIE
+            """
+            INSERT INTO tipuri_tranzactie (nume_tranzactie)
+            SELECT DISTINCT tip_tranzactie
+            FROM raw_data
+            WHERE tip_tranzactie IS NOT NULL AND processed = false
+            ON CONFLICT (nume_tranzactie) DO NOTHING;
+            """,
 
-            # 4. Inserarea Finală în Tabelul Anunturi
+            # 7. Inserarea Finală în Tabelul Anunturi
             # Corelăm toate ID-urile din tabelele de nomenclator
             """
             INSERT INTO anunturi (
-                id_localitate, id_tip_imobiliar, id_tip_tranzactie, id_perioada_constructie,
-                suprafata, etaj, an_constructie, compartimentare, pret, data_publicare, id_sursa_raw
+                id_localitate, 
+                id_tip_imobiliar,
+                id_tip_tranzactie, 
+                id_perioada_constructie,
+                suprafata, 
+                etaj, an_constructie, 
+                compartimentare, 
+                pret, 
+                ata_publicare, 
+                id_sursa_raw
             )
             SELECT 
                 l.id_localitate, 
@@ -55,19 +90,22 @@ def normalize_db():
                 raw.data, 
                 raw.id_raw
             FROM raw_data raw
-            -- Join pentru a găsi localitatea corectă în județul corect
             JOIN judete j ON raw.judet = j.nume_judet
             JOIN localitati l ON raw.oras = l.nume_localitate AND l.id_judet = j.id_judet
-            -- Left Join pentru nomenclatoare (dacă tipul nu există, va fi NULL)
             LEFT JOIN tipuri_imobil ti ON raw.tip_imobiliar = ti.nume_tip
             LEFT JOIN tipuri_tranzactie tt ON raw.tip_tranzactie = tt.nume_tranzactie
             LEFT JOIN perioada_an_constructie p ON raw.perioada_constructie = p.perioada_constructie
+            LEFT JOIN compartimentari c ON raw.compartimentare = c.nume_compartimentare
             WHERE raw.processed = false;
             """,
 
             # 5. Marcare Date ca Procesate
             """
-            UPDATE raw_data SET processed = true WHERE processed = false;
+            UPDATE raw_data 
+            SET processed = true 
+            WHERE processed = false
+            AND id_raw IN (
+                SELECT id_sursa_raw FROM anunturi);
             """
         ]
 

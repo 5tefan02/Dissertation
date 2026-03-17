@@ -1,5 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
 from webdriver_manager.firefox import GeckoDriverManager
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -7,13 +8,18 @@ import time
 from datetime import datetime
 import re
 
+
 def scrape_olx():
     rezultate = []
     links = []
-
+    
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
 
     driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()))
-    driver.get('https://www.olx.ro/imobiliare/')
+    driver.get('https://www.olx.ro/imobiliare/?currency=EUR&search%5Border%5D=created_at:desc')
     time.sleep(3)
 
     soup = BeautifulSoup(driver.page_source, 'lxml')
@@ -114,22 +120,32 @@ def scrape_olx():
                     
             camere_element = soup.find('p', class_='css-13x8d99')
             if camere_element.text.strip().startswith('Camere'):
-                camere = camere_element.text.split(':', 1)[1].strip()        
+                camere = camere_element.text.split(':', 1)[1].strip()     
             
 
             pret = soup.find('h3', class_='css-1j840l6')
             pret_text = pret.text
-            pret = int(''.join(c for c in pret_text if c.isdigit()))
-            
-            # 1. SETĂM DEFAULT PE NONE (O singură dată, la începutul anunțului)
-            
+            pret = int(''.join(c for c in pret_text if c.isdigit()))     
             
             
             data = datetime.today().strftime('%Y-%m-%d')
             
             processed = False
             
-            id_raw = f"{oras}{judet}{tip_imobiliar}{perioada_constructie}{pret}{data}"
+        
+            id_raw = "".join(
+                str(x) for x in [
+                oras,
+                judet,
+                tip_imobiliar,
+                suprafata,
+                etaj,
+                camere,
+                perioada_constructie,
+                tip_imobiliar,
+                tip_tranzactie
+            ] if x is not None
+)
 
         except Exception as e:
             print(f"An error occurred: {e}")
