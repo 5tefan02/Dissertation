@@ -22,8 +22,7 @@ Built with Python, the pipeline extracts raw unstructured web data, cleans and f
 ## Project Structure
 
 ```text
-├── Data/
-│   └── clean_data.py          # Pandas scripts for raw CSV cleaning
+
 ├── Database/
 │   ├── db_manager.py          # PostgreSQL connection & SessionLocal setup
 │   ├── db_tabels.py           # SQLAlchemy ORM definitions (Base, Tables, Foreign Keys)
