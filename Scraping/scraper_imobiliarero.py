@@ -11,11 +11,7 @@ import re
 def scrape_imobiliarero(url_start, tip_tranzactie):
     rezultate = []
     links = []
-    
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
+
 
 
     driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()))
@@ -83,21 +79,30 @@ def scrape_imobiliarero(url_start, tip_tranzactie):
                         except (ValueError, TypeError):
                             suprafata = "Eroare format"
 
+            # --- Început bloc etaj ---
             label_etaj = soup.find('span', string=re.compile(r'Etaj', re.IGNORECASE))
+            etaj = None # Inițializăm cu None pentru siguranță
 
             if label_etaj:
                 container_etaj = label_etaj.find_parent('div')
-                valoare_etaj_span = container_etaj.find('span', class_='font-semibold')
-                
-                if valoare_etaj_span:
-                    text_etaj_complet = valoare_etaj_span.get_text(strip=True)
+                if container_etaj:
+                    valoare_etaj_span = container_etaj.find('span', class_='font-semibold')
                     
-                    etaj_curent = text_etaj_complet.split('/')[0].strip()
-                    
-                    try:
-                        etaj = int(etaj_curent)
-                    except ValueError:
-                        etaj = etaj_curent
+                    if valoare_etaj_span:
+                        text_etaj_complet = valoare_etaj_span.get_text(strip=True).lower()
+                        
+                        # 1. Verificăm mai întâi dacă este un etaj special (text)
+                        if "parter" in text_etaj_complet:
+                            etaj = "Parter"
+                        elif "demisol" in text_etaj_complet:
+                            etaj = "Demisol"
+                        elif "mansarda" in text_etaj_complet:
+                            etaj = "Mansarda"
+                        else:
+                            match = re.search(r'\d+', text_etaj_complet)
+                            if match:
+                                etaj = int(match.group())
+            # --- Sfârșit bloc etaj ---
 
             label_an_cosntructie = soup.find('span', string=re.compile(r'An constr.', re.IGNORECASE))
 

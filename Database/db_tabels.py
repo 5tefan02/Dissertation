@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, Boolean, ForeignKey, func 
+from sqlalchemy import Column, Integer, String, Date, Boolean, ForeignKey, func, BigInteger
 from sqlalchemy.orm import relationship
 from Database.db_manager import Base
 
@@ -11,11 +11,11 @@ class Estate(Base):
     oras = Column(String(255), nullable=False)
     suprafata = Column(Integer, nullable=True)
     etaj = Column(String(255), nullable=True) 
-    perioada_constructie = Column(String(255), nullable=True) # Schimbat în nullable=True pentru siguranță
+    perioada_constructie = Column(String(255), nullable=True)
     an_constructie = Column(String(255), nullable=True)
     compartimentare = Column(String(255), nullable=True)
     camere = Column(String(255), nullable=True) 
-    pret = Column(Integer, nullable=False)
+    pret = Column(BigInteger, nullable=False)  # ← CHANGED: BigInteger supports up to 9,223,372,036,854,775,807
     tip_tranzactie = Column(String(50), nullable=True)
     tip_imobiliar = Column(String(50), nullable=True)
     platforma = Column(String(50), nullable=True)
@@ -84,7 +84,8 @@ class Anunt(Base):
     etaj = Column(String(255))
     an_constructie = Column(String(255)) # Valoarea brută (ex: "2020")
     compartimentare = Column(String(255))
-    pret = Column(Integer)
+    pret = Column(BigInteger, nullable=False)
+    URL_anunt = Column(String(500), nullable=True)
     data_publicare = Column(Date)
     id_sursa_raw = Column(String(255), ForeignKey('raw_data.id_raw'))
 
@@ -101,10 +102,10 @@ class IstoricAnunt(Base):
     id_istoric = Column(Integer, primary_key=True, autoincrement=True)
     id_anunt = Column(Integer, ForeignKey('anunturi.id_anunt'), nullable=False)
     
-    pret = Column(Integer, nullable=False)
+    pret = Column(BigInteger, nullable=False)  # ← CHANGED: Integer → BigInteger
     status_anunt = Column(String(50), nullable=False, default="activ")
     data_inceput = Column(Date, nullable=False)
     data_sfarsit = Column(Date, nullable=True)
 
-    # RELAȚIA BACK (anunt_legatura trebuie să existe în clasa Anunt la relationship)
+    # RELAȚIA BACK
     anunt_legatura = relationship("Anunt", back_populates="istoric_anunturi")

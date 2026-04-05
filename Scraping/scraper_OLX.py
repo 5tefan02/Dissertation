@@ -13,10 +13,6 @@ def scrape_olx():
     rezultate = []
     links = []
     
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
 
     driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()))
     driver.get('https://www.olx.ro/imobiliare/?currency=EUR&search%5Border%5D=created_at:desc')
@@ -37,20 +33,18 @@ def scrape_olx():
             soup = BeautifulSoup(driver.page_source, 'lxml')
             
 
-            oras_raw = soup.find('p', class_='css-9pna1a')
+            oras_raw = soup.find('p', class_='css-1g5nan')
             oras_raw = oras_raw.text.strip() if oras_raw else ""
 
             judete_raw = soup.find_all("p", class_="css-3cz5o2")
             judet_raw = judete_raw[1].text.strip() if len(judete_raw) > 1 else ""
             
             if any(char.isdigit() for char in oras_raw):
-                # EXCEPȚIE: Dacă este unul dintre sectoarele Bucureștiului, NU sărim peste el
-                # Folosim regex pentru a detecta "Sector" urmat de o cifră între 1 și 6
                 este_sector_valid = bool(re.search(r'Sector(ul)?\s*[1-6]', oras_raw, re.IGNORECASE))
     
                 if not este_sector_valid:
                     print(f"Sărit anunt: Adresă detectată în câmpul orașului -> {oras_raw}")
-                    continue  # Trece direct la următorul anunț din listă
+                    continue  
                 
             if judet_raw == "Bucuresti - Ilfov":
                 if "bucuresti" in oras_raw.lower():
@@ -63,7 +57,6 @@ def scrape_olx():
                 judet = judet_raw
 
 
-            # Initialize variables to hold the extracted data
             suprafata = None
             etaj = None
             perioada_constructie = None
@@ -83,8 +76,6 @@ def scrape_olx():
                     if a_tag:
                         text_a = a_tag.get_text(strip=True).lower()
                         
-                        # 2. VERIFICĂM CONȚINUTUL (Fără ELSE care să reseteze)
-                        # Identificare Tranzacție
                         if "vanzare" in text_a:
                             tip_tranzactie = "vanzare"
                         elif "inchiriere" in text_a or "inchiriat" in text_a:
@@ -92,17 +83,17 @@ def scrape_olx():
 
                         # Identificare Tip Imobil
                         if "apartamente" in text_a:
-                            tip_imobiliar = "apartament"
+                            tip_imobiliar = "Apartament"
                         elif "case" in text_a:
-                            tip_imobiliar = "casa"
+                            tip_imobiliar = "Casa"
                         elif "terenuri" in text_a:
-                            tip_imobiliar = "teren"
+                            tip_imobiliar = "Teren"
 
-                        if tip_imobiliar == "apartament":
+                        if tip_imobiliar == "Apartament":
                             camere = ''.join(c for c in text_a if c.isdigit())
 
             
-            elemente = soup.find_all('p', class_='css-13x8d99')
+            elemente = soup.find_all('p', class_='css-odhutu')
             for element in elemente:
                 text = element.text.strip()
         
@@ -115,17 +106,20 @@ def scrape_olx():
                     perioada_constructie = text.split(':',1)[1].strip()
                 elif text.startswith('Compartimentare'):
                     compartimentare = text.split(':',1)[1].strip()
-                if tip_imobiliar == "casa" and text.startswith('Camere'):
+                if tip_imobiliar == "Casa" and text.startswith('Camere'):
                     camere = text.split(':',1)[1].strip()
-                    
-            camere_element = soup.find('p', class_='css-13x8d99')
-            if camere_element.text.strip().startswith('Camere'):
-                camere = camere_element.text.split(':', 1)[1].strip()     
+                       
             
+            camere_element = soup.find('p', class_='css-13x8d99')
+            # Verificăm mai întâi dacă a găsit elementul, înainte să îi cerem textul!
+            if camere_element and camere_element.text.strip().startswith('Camere'):
+                camere = camere_element.text.split(':', 1)[1].strip()
 
-            pret = soup.find('h3', class_='css-1j840l6')
+            pret = soup.find('h3', class_='css-j7prh4')
             pret_text = pret.text
             pret = int(''.join(c for c in pret_text if c.isdigit()))     
+            
+            
             
             
             data = datetime.today().strftime('%Y-%m-%d')

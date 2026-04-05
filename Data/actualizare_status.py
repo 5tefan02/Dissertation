@@ -1,21 +1,14 @@
 import sys
 import os
 from datetime import date
-
-# Adăugăm directorul principal al proiectului (un nivel mai sus) în PATH-ul Python
-# Acest lucru previne eroarea "ModuleNotFoundError: No module named 'Database'"
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 from webdriver_manager.firefox import GeckoDriverManager
-
-# Acum putem importa din Database fără probleme, chiar dacă scriptul e în Data/
 from Database.db_manager import SessionLocal
 from Database.db_tabels import Estate, Anunt, IstoricAnunt
 
-# Importăm funcția de scraping din fișierul de alături
 from Data.verificare_status import verificare_status
 
 def verifica_si_actualizeaza_preturi():
@@ -31,7 +24,6 @@ def verifica_si_actualizeaza_preturi():
         session.close()
         return
 
-    # Configurăm Selenium o singură dată pentru toate anunțurile
     options = Options()
     options.add_argument("--headless")
     options.add_argument("--disable-gpu")
@@ -87,7 +79,6 @@ def verifica_si_actualizeaza_preturi():
                 print(f" -> PREȚ SCHIMBAT! Vechi: {pret_vechi} | Nou: {pret_nou}")
                 
                 anunt.pret = pret_nou
-                raw_data.pret = pret_nou
                 
                 if istoric_activ:
                     istoric_activ.data_sfarsit = azi

@@ -9,7 +9,7 @@ def verificare_status(driver, url, platforma):
     """
     try:
         driver.get(url)
-        time.sleep(3) # Așteptăm să se încarce pagina complet
+        time.sleep(3)
         
         soup = BeautifulSoup(driver.page_source, 'lxml')
         
@@ -50,7 +50,7 @@ def verificare_status(driver, url, platforma):
             print(f"✓ [Activ - Preț neidentificat] URL funcțional: {url}")
             return 0  # Returnează 0 pentru a indica "active but price not found"
         
-        print(f"⚠️ [Inactiv] Pagina nu se a putut procesa corect: {url}")
+        print(f"[Inactiv] Pagina nu se a putut procesa corect: {url}")
         return None
             
     except Exception as e:
