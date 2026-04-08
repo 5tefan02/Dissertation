@@ -7,6 +7,7 @@ import pandas as pd
 import time
 from datetime import datetime
 import re
+from Data.cleaner import clean_location, clean_price, clean_suprafata, clean_etaj, an_to_perioada, build_id_raw
 
 def scrape_imobiliarero(url_start, tip_tranzactie):
     rezultate = []
@@ -14,9 +15,14 @@ def scrape_imobiliarero(url_start, tip_tranzactie):
 
 
 
-    driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()))
+    options = Options()
+    options.add_argument("--headless")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
+
+    driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()), options=options)
     driver.get(url_start)
-    time.sleep(5) 
+    time.sleep(5)
 
     soup = BeautifulSoup(driver.page_source, 'lxml')
     anunturi_imobiliare = soup.find_all('a', {'data-cy': 'listing-information-link'})
@@ -31,33 +37,34 @@ def scrape_imobiliarero(url_start, tip_tranzactie):
             driver.get(link)
             time.sleep(2)
             soup = BeautifulSoup(driver.page_source, 'lxml')
-            
+
+            oras = None
+            judet = None
+            tip_imobiliar = None
             suprafata = None
-            
+            camere = None
+
             nav = soup.find('nav', {'data-cy': 'breadcrumbs'})
 
             if nav:
-                links = nav.find_all('a')
-                
-                text_links = [l.get_text(strip=True) for l in links if l.get_text(strip=True)]
+                breadcrumb_links = nav.find_all('a')
+
+                text_links = [l.get_text(strip=True) for l in breadcrumb_links if l.get_text(strip=True)]
                 
                 if len(text_links) >= 2:
                     raw_judet = text_links[2]
                     raw_oras = text_links[3]
                     raw_tip_imobiliar = text_links[1]
                     
-                    judet = raw_judet.replace("Județul", "").strip()
-                    oras = raw_oras.strip()
                     tip_imobiliar = raw_tip_imobiliar.strip()
-                    
-                    if "Bucure" in judet:
+                    oras, judet = clean_location(raw_oras, raw_judet)
+                    if oras is None:
+                        print(f"Locație invalidă: {raw_oras}, {raw_judet}")
+                        continue
+                    if judet == "Bucuresti" and "Bucuresti" not in oras:
                         oras = f"Bucuresti, {oras}"
-                        
-                    print(f" Judet: {judet}, Oras: {oras}")
 
-                
-                
-            suprafata = None
+                    print(f" Judet: {judet}, Oras: {oras}")
 
             label_suprafata = soup.find('span', string=re.compile(r'Suprafe|Sup\.', re.IGNORECASE))
 
@@ -70,16 +77,8 @@ def scrape_imobiliarero(url_start, tip_tranzactie):
                 valoare_span = container.find(lambda tag: tag.name == "span" and "mp" in tag.text.lower())
                 
                 if valoare_span:
-                    text_suprafata = valoare_span.get_text(strip=True)
-                    match = re.search(r"(\d+[\d.,]*)", text_suprafata)
-                    if match:
-                        try:
-                            numar_str = match.group(1).replace(',', '.')
-                            suprafata = round(float(numar_str))
-                        except (ValueError, TypeError):
-                            suprafata = "Eroare format"
+                    suprafata = clean_suprafata(valoare_span.get_text(strip=True))
 
-            # --- Început bloc etaj ---
             label_etaj = soup.find('span', string=re.compile(r'Etaj', re.IGNORECASE))
             etaj = None # Inițializăm cu None pentru siguranță
 
@@ -89,46 +88,24 @@ def scrape_imobiliarero(url_start, tip_tranzactie):
                     valoare_etaj_span = container_etaj.find('span', class_='font-semibold')
                     
                     if valoare_etaj_span:
-                        text_etaj_complet = valoare_etaj_span.get_text(strip=True).lower()
-                        
-                        # 1. Verificăm mai întâi dacă este un etaj special (text)
-                        if "parter" in text_etaj_complet:
-                            etaj = "Parter"
-                        elif "demisol" in text_etaj_complet:
-                            etaj = "Demisol"
-                        elif "mansarda" in text_etaj_complet:
-                            etaj = "Mansarda"
-                        else:
-                            match = re.search(r'\d+', text_etaj_complet)
-                            if match:
-                                etaj = int(match.group())
-            # --- Sfârșit bloc etaj ---
+                        etaj = clean_etaj(valoare_etaj_span.get_text(strip=True))
 
-            label_an_cosntructie = soup.find('span', string=re.compile(r'An constr.', re.IGNORECASE))
+            an_constructie = None
+            label_an_constructie = soup.find('span', string=re.compile(r'An constr.', re.IGNORECASE))
 
-            if label_an_cosntructie:
-                container_an = label_an_cosntructie.find_parent('div')
+            if label_an_constructie:
+                container_an = label_an_constructie.find_parent('div')
                 valoare_an_span = container_an.find('span', class_='font-semibold')
-                
+
                 if valoare_an_span:
-                    text_raw = valoare_an_span.get_text(strip=True) 
-                    
-                    match = re.search(r"(\d{4})", text_raw)
-                    
+                    match = re.search(r"(\d{4})", valoare_an_span.get_text(strip=True))
                     if match:
                         try:
                             an_constructie = int(match.group(1))
                         except ValueError:
                             an_constructie = None
-                        
-            if int(an_constructie) < 1977:
-                perioada_constructie = "inainte de 1977"
-            elif int(an_constructie) >= 1977 and int(an_constructie) < 1990:
-                perioada_constructie = "1977-1990"
-            elif int(an_constructie) >= 1990 and int(an_constructie) < 2000:
-                perioada_constructie = "1990-2000"
-            elif int(an_constructie) >= 2000:
-                perioada_constructie = "dupa 2000"           
+
+            perioada_constructie = an_to_perioada(an_constructie)
             
             compartimentare = None
 
@@ -160,9 +137,8 @@ def scrape_imobiliarero(url_start, tip_tranzactie):
                     except ValueError:
                         camere = camere
 
-            label_pret = soup.find('div', {'aria-label':'price'})
-            pret = label_pret.text
-            pret = int(''.join(c for c in pret if c.isdigit()))
+            label_pret = soup.find('div', {'aria-label': 'price'})
+            pret = clean_price(label_pret.text if label_pret else None)
 
 
             platforma = "imobiliare.ro"
@@ -171,18 +147,9 @@ def scrape_imobiliarero(url_start, tip_tranzactie):
 
             processed = False
             
-            id_raw = "".join(
-                str(x) for x in [
-                oras,
-                judet,
-                tip_imobiliar,
-                suprafata,
-                etaj,
-                camere,
-                perioada_constructie,
-                tip_imobiliar,
-                tip_tranzactie
-            ] if x is not None
+            id_raw = build_id_raw(
+                oras, judet, tip_imobiliar, suprafata, etaj,
+                camere, perioada_constructie, tip_tranzactie
             )
                 
         except Exception as e:

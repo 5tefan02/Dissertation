@@ -1,58 +1,82 @@
 from bs4 import BeautifulSoup
 import time
-import re
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+from Data.cleaner import clean_price
+
 
 def verificare_status(driver, url, platforma):
-    """
-    Accesează URL-ul folosind driver-ul Selenium curent și extrage prețul.
-    Returnează prețul (int) sau None dacă anunțul este inactiv/șters.
-    """
     try:
         driver.get(url)
-        time.sleep(3)
-        
-        soup = BeautifulSoup(driver.page_source, 'lxml')
-        
-        # --- 1. VERIFICARE EXPLICITĂ PENTRU ANUNȚ INACTIV ---
-        text_pagina = soup.get_text().lower()
-        if "acest anunț nu mai este valabil" in text_pagina or "anunț dezactivat" in text_pagina or "nu a fost gasita" in text_pagina:
-            print(f" [Confirmat Inactiv] Anunțul a fost dezactivat de utilizator: {url}")
-            return None
 
-        # --- 2. EXTRAGERE PREȚ PENTRU FIECARE PLATFORMĂ ---
-        pret_element = None
-        
+        # OLX
         if platforma == "OLX":
-            pret_element = soup.find(attrs={"data-testid": "ad-price"})
-            if not pret_element:
-                pret_element = soup.find(['h3', 'div'], class_=re.compile(r'css-1j840l6|css-90xrc0'))
-            if not pret_element:
-                pret_element = soup.find('h3', class_=re.compile(r'css-'))
-                
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.any_of(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, '[data-testid="ad-price-container"]')),
+                        EC.presence_of_element_located((By.CSS_SELECTOR, '[data-cy="500-page"]'))
+                    )
+                )
+            except:
+                pass
+
+            soup = BeautifulSoup(driver.page_source, 'lxml')
+
+            if soup.find('p', {'data-cy': '500-page'}):
+                print(f"[Inactiv - OLX] Pagina de eroare detectata: {url}")
+                return None
+
+            pret_element = soup.find(attrs={'data-testid': 'ad-price-container'})
+
+        # IMOBILIARE.RO
         elif platforma == "imobiliare.ro":
-            pret_element = soup.find('div', {'aria-label': 'price'})
-            if not pret_element:
-                pret_element = soup.find('span', {'aria-label': 'price'})
-            if not pret_element:
-                pret_element = soup.find(['div', 'span'], class_=re.compile(r'price'))
-                
+            time.sleep(2)
+
+            if driver.current_url != url:
+                print(f"[Inactiv - imobiliare.ro] Redirect detectat: {url}")
+                return None
+
+            try:
+                WebDriverWait(driver, 8).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, '[aria-label="price"]'))
+                )
+            except:
+                pass
+
+            soup = BeautifulSoup(driver.page_source, 'lxml')
+            pret_element = soup.find(attrs={'aria-label': 'price'})
+
+        # STORIA
         elif platforma == "Storia":
+            try:
+                WebDriverWait(driver, 10).until(
+                    EC.any_of(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, 'strong[data-cy="adPageHeaderPrice"]')),
+                        EC.presence_of_element_located((By.CSS_SELECTOR, '[data-cy="redirectedFromInactiveAd"]'))
+                    )
+                )
+            except:
+                pass
+
+            soup = BeautifulSoup(driver.page_source, 'lxml')
+
+            if soup.find(attrs={'data-cy': 'redirectedFromInactiveAd'}):
+                print(f"[Inactiv - Storia] Banner inactiv detectat: {url}")
+                return None
+
             pret_element = soup.find('strong', {'data-cy': 'adPageHeaderPrice'})
-            if not pret_element:
-                pret_element = soup.find(['strong', 'span'], class_=re.compile(r'price'))
-        
+
+        # READ THE PRICE
         if pret_element:
-            return int(''.join(c for c in pret_element.text if c.isdigit()))
-        
-        # --- 3. VERIFICARE FINALĂ: ACTIVE vs INACTIVE ---
-        # Dacă URL-ul se încarcă cu succes și NU conține text de inactiv, e activ
-        if not any(text in text_pagina for text in ["error", "404", "not found", "defunct", "removed"]):
-            print(f"✓ [Activ - Preț neidentificat] URL funcțional: {url}")
-            return 0  # Returnează 0 pentru a indica "active but price not found"
-        
-        print(f"[Inactiv] Pagina nu se a putut procesa corect: {url}")
-        return None
-            
+            pret = clean_price(pret_element.get_text(strip=True))
+            if pret:
+                return pret
+
+        print(f"[Activ - pret neidentificat] {url}")
+        return 0
+
     except Exception as e:
-        print(f"Eroare la extragerea prețului pentru {url} ({platforma}): {e}")
+        print(f"[Eroare] {platforma} | {url} | {e}")
         return None

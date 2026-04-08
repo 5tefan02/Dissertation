@@ -7,6 +7,7 @@ import pandas as pd
 import time
 from datetime import datetime
 import re
+from Data.cleaner import clean_location, clean_price, build_id_raw
 
 
 def scrape_olx():
@@ -39,22 +40,10 @@ def scrape_olx():
             judete_raw = soup.find_all("p", class_="css-3cz5o2")
             judet_raw = judete_raw[1].text.strip() if len(judete_raw) > 1 else ""
             
-            if any(char.isdigit() for char in oras_raw):
-                este_sector_valid = bool(re.search(r'Sector(ul)?\s*[1-6]', oras_raw, re.IGNORECASE))
-    
-                if not este_sector_valid:
-                    print(f"Sărit anunt: Adresă detectată în câmpul orașului -> {oras_raw}")
-                    continue  
-                
-            if judet_raw == "Bucuresti - Ilfov":
-                if "bucuresti" in oras_raw.lower():
-                    judet = "Bucuresti"
-                else:
-                    judet = "Ilfov"
-                oras = oras_raw
-            else:
-                oras = oras_raw
-                judet = judet_raw
+            oras, judet = clean_location(oras_raw, judet_raw)
+            if oras is None:
+                print(f"Sărit anunț: Locație invalidă -> {oras_raw}")
+                continue
 
 
             suprafata = None
@@ -115,9 +104,8 @@ def scrape_olx():
             if camere_element and camere_element.text.strip().startswith('Camere'):
                 camere = camere_element.text.split(':', 1)[1].strip()
 
-            pret = soup.find('h3', class_='css-j7prh4')
-            pret_text = pret.text
-            pret = int(''.join(c for c in pret_text if c.isdigit()))     
+            pret_element = soup.find('h3', class_='css-j7prh4')
+            pret = clean_price(pret_element.text if pret_element else None)     
             
             
             
@@ -127,19 +115,10 @@ def scrape_olx():
             processed = False
             
         
-            id_raw = "".join(
-                str(x) for x in [
-                oras,
-                judet,
-                tip_imobiliar,
-                suprafata,
-                etaj,
-                camere,
-                perioada_constructie,
-                tip_imobiliar,
-                tip_tranzactie
-            ] if x is not None
-)
+            id_raw = build_id_raw(
+                oras, judet, tip_imobiliar, suprafata, etaj,
+                camere, perioada_constructie, tip_tranzactie
+            )
 
         except Exception as e:
             print(f"An error occurred: {e}")

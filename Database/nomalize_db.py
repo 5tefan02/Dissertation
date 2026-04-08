@@ -76,36 +76,34 @@ def normalize_db():
             # 7. Inserarea Finală în Tabelul Anunturi
             """
             INSERT INTO anunturi (
-                id_localitate, 
+                id_localitate,
                 id_tip_imobiliar,
-                id_tip_tranzactie, 
+                id_tip_tranzactie,
                 id_perioada_constructie,
                 id_compartimentare,
-                suprafata, 
-                etaj, 
-                an_constructie, 
-                compartimentare, 
-                pret, 
-                URL_anunt,
-                data_publicare, 
+                suprafata,
+                etaj,
+                an_constructie,
+                compartimentare,
+                pret,
+                data_publicare,
                 id_sursa_raw
             )
-            SELECT 
-                l.id_localitate, 
-                ti.id_tip_imobiliar, 
-                tt.id_tip_tranzactie, 
+            SELECT
+                l.id_localitate,
+                ti.id_tip_imobiliar,
+                tt.id_tip_tranzactie,
                 p.id_an_constructie,
                 c.id_compartimentare,
-                raw.suprafata, 
-                CASE 
+                raw.suprafata,
+                CASE
                     WHEN raw.etaj ILIKE 'parter' THEN '0'
                     ELSE raw.etaj
                 END,
-                raw.an_constructie, 
-                raw.compartimentare, 
-                raw.pret, 
-                raw.URL_anunt,
-                raw.data, 
+                raw.an_constructie,
+                raw.compartimentare,
+                raw.pret,
+                raw.data,
                 raw.id_raw
             FROM raw_data raw
             JOIN judete j ON INITCAP(TRIM(TRANSLATE(raw.judet, 'ăâîșțşţĂÂÎȘȚŞŢ', 'aaiststAAISTST'))) = j.nume_judet
