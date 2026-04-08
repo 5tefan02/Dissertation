@@ -9,10 +9,10 @@ Base = declarative_base()
 DB_URL = URL.create(
     drivername="postgresql+psycopg2",
     username="postgres",
-    password="1234",      # 🔴 schimbă parola
+    password="1234", 
     host="localhost",
     port=5432,
-    database="DB1"     # 🔴 schimbă DB dacă e nevoie
+    database="DB1"
 )
 
 engine = create_engine(DB_URL, echo=False, future=True)

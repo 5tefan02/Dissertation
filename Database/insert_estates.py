@@ -1,6 +1,7 @@
 from Database.db_tabels import Estate
 from Database.db_manager import SessionLocal
 from sqlalchemy import text
+from Data.cleaner import validate_listing
 
 def insert_estates(rezultate: list[dict]):
     if not rezultate:
@@ -8,16 +9,11 @@ def insert_estates(rezultate: list[dict]):
 
     session = SessionLocal()
 
-    # --- 1. FILTRAREA DATELOR (Scutul de protecție) ---
+    # 1. FILTRAREA DATELOR 
     rezultate_curate = []
-    
+
     for anunt in rezultate:
-        # Verificăm ca datele obligatorii (NOT NULL în DB) să existe și să nu fie "N/A"
-        if (anunt.get('judet') and anunt.get('judet') != "N/A" and 
-            anunt.get('oras') and anunt.get('oras') != "N/A" and 
-            anunt.get('pret') is not None and 
-            anunt.get('id_raw')):
-            
+        if validate_listing(anunt):
             rezultate_curate.append(anunt)
         else:
             print(f"[DB-Skip] Ignorat anunț invalid/fără locație: {anunt.get('URL_anunt')}")
@@ -28,7 +24,7 @@ def insert_estates(rezultate: list[dict]):
         session.close()
         return
 
-    # --- 2. INSERAREA EFECTIVĂ (Doar cu date perfecte) ---
+    # 2. INSERAREA EFECTIVA
     query = text("""INSERT INTO raw_data (
             id_raw, "URL_anunt", judet, oras, suprafata, etaj, 
             perioada_constructie, an_constructie, compartimentare, 
@@ -42,7 +38,6 @@ def insert_estates(rezultate: list[dict]):
     """)
     
     try:
-        # Executăm toată lista CURATĂ odată (foarte rapid)
         session.execute(query, rezultate_curate)
         session.commit()
         print(f"[DB] Procesare finalizată. {len(rezultate_curate)} date noi (valide) au fost inserate, duplicatele au fost ignorate.")

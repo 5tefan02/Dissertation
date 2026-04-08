@@ -13,6 +13,10 @@ def main():
     rezultate_olx = scrape_olx()
     rezultate_imobiliarero_vanzare = scrape_imobiliarero('https://www.imobiliare.ro/vanzare-imobiliare?sort=latest', 'vanzare')
     rezultate_imobiliarero_inchiriere = scrape_imobiliarero('https://www.imobiliare.ro/inchirieri-imobiliare?sort=latest', 'inchiriere')
+    rezultate_storia_vanzare_apartamente = scrape_storia('https://www.storia.ro/ro/rezultate/vanzare/apartament/toata-romania?by=LATEST&direction=DESC&limit=72', 'vanzare', 'Apartament')
+    rezultate_storia_inchiriere_apartamente = scrape_storia('https://www.storia.ro/ro/rezultate/inchiriere/apartament/toata-romania?by=LATEST&direction=DESC&limit=72', 'inchiriere', 'Apartament')
+    rezultate_storia_vanzare_casa = scrape_storia('https://www.storia.ro/ro/rezultate/vanzare/casa/toata-romania?by=LATEST&direction=DESC&limit=72', 'vanzare', 'Casa')
+    rezultate_storia_inchiriere_casa = scrape_storia('https://www.storia.ro/ro/rezultate/inchiriere/casa/toata-romania?by=LATEST&direction=DESC&limit=72', 'inchiriere', 'Casa')
 
     if rezultate_olx:
         insert_estates(rezultate_olx)
@@ -27,11 +31,6 @@ def main():
     if rezultate_imobiliarero_inchiriere:
         insert_estates(rezultate_imobiliarero_inchiriere)
         print(f"{len(rezultate_imobiliarero_inchiriere)} rezultate de inchiriere inserate in baza de date.")
-    
-    rezultate_storia_vanzare_apartamente = scrape_storia('https://www.storia.ro/ro/rezultate/vanzare/apartament/toata-romania?by=LATEST&direction=DESC&limit=72', 'vanzare', 'Apartament')
-    rezultate_storia_inchiriere_apartamente = scrape_storia('https://www.storia.ro/ro/rezultate/inchiriere/apartament/toata-romania?by=LATEST&direction=DESC&limit=72', 'inchiriere', 'Apartament')
-    rezultate_storia_vanzare_casa = scrape_storia('https://www.storia.ro/ro/rezultate/vanzare/casa/toata-romania?by=LATEST&direction=DESC&limit=72', 'vanzare', 'Casa')
-    rezultate_storia_inchiriere_casa = scrape_storia('https://www.storia.ro/ro/rezultate/inchiriere/casa/toata-romania?by=LATEST&direction=DESC&limit=72', 'inchiriere', 'Casa')
     
     if rezultate_storia_vanzare_apartamente:
         insert_estates(rezultate_storia_vanzare_apartamente)

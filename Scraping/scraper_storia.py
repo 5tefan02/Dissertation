@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import time
 from datetime import datetime
 import re
+from Data.cleaner import clean_diacritics, clean_location, clean_price, clean_suprafata, clean_etaj, an_to_perioada, clean_compartimentare, build_id_raw
 
 def scrape_storia(url_start, tip_tranzactie, tip_imobiliar):
     rezultate = []
@@ -58,45 +59,27 @@ def scrape_storia(url_start, tip_tranzactie, tip_imobiliar):
             location_element = soup.find('a', {'data-sentry-source-file': 'MapLink.tsx'})
 
             if location_element:
-                text_locatie = location_element.get_text(strip=True)
-                # Curățăm diacriticele
-                text_locatie = text_locatie.replace('ș', 's').replace('ț', 't').replace('ă', 'a').replace('â', 'a').replace('î', 'i')
-                
+                text_locatie = clean_diacritics(location_element.get_text(strip=True))
                 parti = [p.strip() for p in text_locatie.split(',')]
-                
-                oras = parti[-2] if len(parti) >= 2 else parti[0]
-                judet = parti[-1] if len(parti) >= 1 else None
 
-                # Logica specială pentru București
-                if "Bucuresti" in text_locatie:
-                    judet = "Bucuresti"
-                    sector_gasit = None
-                    for p in parti:
-                        if "Sector" in p:
-                            sector_gasit = p
-                            break
-                    
-                    if sector_gasit:
-                        oras = f"Bucuresti, {sector_gasit}"
-                    else:
-                        oras = "Bucuresti"
-                else:
-                    if judet:
-                        judet = judet.replace("Judetul", "").strip()
+                oras_raw = parti[-2] if len(parti) >= 2 else parti[0]
+                judet_raw = parti[-1] if len(parti) >= 1 else None
+
+                oras, judet = clean_location(oras_raw, judet_raw)
+
+                # Storia-specific: rebuild the city field for Bucuresti listings
+                if judet == "Bucuresti":
+                    sector_gasit = next((p.strip() for p in parti if "Sector" in p), None)
+                    oras = f"Bucuresti, {sector_gasit}" if sector_gasit else "Bucuresti"
 
             # --- SUPRAFAȚĂ ---
             detalii_items = soup.find_all('div', class_=re.compile(r'e178zspo0|css-1okys8k'))
             for item in detalii_items:
                 text_item = item.get_text(separator=" ", strip=True)
                 if "m²" in text_item or "Suprafata" in text_item:
-                    match = re.search(r"(\d+[\d.,]*)", text_item)
-                    if match:
-                        try:
-                            numar_str = match.group(1).replace(',', '.')
-                            suprafata = round(float(numar_str))
-                            break
-                        except:
-                            continue
+                    suprafata = clean_suprafata(text_item)
+                    if suprafata:
+                        break
 
             # --- DETALII (Etaj, An, Camere) - O singură buclă! ---
             containere_detalii = soup.find_all('div', {'data-sentry-element': 'ItemGridContainer'})
@@ -108,26 +91,14 @@ def scrape_storia(url_start, tip_tranzactie, tip_imobiliar):
                 
                 # Verificăm Etajul
                 if "etaj" in text_complet or "parter" in text_complet or "demisol" in text_complet:
-                    if "parter" in text_complet:
-                        etaj_final = 0
-                    elif "demisol" in text_complet:
-                        etaj_final = "Demisol"
-                    elif "mansarda" in text_complet:
-                        etaj_final = "Mansarda"
-                    else:
-                        match = re.search(r'\d+', text_complet)
-                        if match:
-                            etaj_final = int(match.group())
-                
+                    etaj_final = clean_etaj(text_complet)
+
                 # Verificăm Anul Construcției
                 elif "anul construc" in text_complet or "an construc" in text_complet:
                     match = re.search(r'\d{4}', text_complet)
                     if match:
                         an_constructie = int(match.group())
-                        if an_constructie < 1977: perioada_constructie = "inainte de 1977"
-                        elif 1977 <= an_constructie < 1990: perioada_constructie = "1977-1990"
-                        elif 1990 <= an_constructie < 2000: perioada_constructie = "1990-2000"
-                        elif an_constructie >= 2000: perioada_constructie = "dupa 2000"
+                        perioada_constructie = an_to_perioada(an_constructie)
 
                 # Verificăm Camerele
                 elif "camere" in text_complet:
@@ -141,23 +112,12 @@ def scrape_storia(url_start, tip_tranzactie, tip_imobiliar):
                 container_descriere = soup.find('div', class_='css-fl29zg')
 
             if container_descriere:
-                text_descriere = container_descriere.get_text(separator=" ", strip=True).lower()
-                
-                if "semidecomandat" in text_descriere:
-                    compartimentare = "semidecomandat"
-                elif "nedecomandat" in text_descriere:
-                    compartimentare = "nedecomandat"
-                elif "decomandat" in text_descriere:
-                    compartimentare = "decomandat"
-                elif "circular" in text_descriere:
-                    compartimentare = "circular"
+                text_descriere = container_descriere.get_text(separator=" ", strip=True)
+                compartimentare = clean_compartimentare(text_descriere)
 
             # --- EXTRAGERE PREȚ ---
             pret_element = soup.find('strong', {'data-cy': 'adPageHeaderPrice'})
-            if pret_element:
-                pret_text = pret_element.get_text(strip=True)
-                # Extragem doar cifrele din preț
-                pret = int(''.join(c for c in pret_text if c.isdigit()))
+            pret = clean_price(pret_element.get_text(strip=True) if pret_element else None)
             
             # --- DATE GENERALE ---
             platforma = "Storia"
@@ -165,11 +125,10 @@ def scrape_storia(url_start, tip_tranzactie, tip_imobiliar):
             processed = False
             
             # Generare ID Unic bazat pe datele anunțului
-            id_raw = "".join(
-                str(x) for x in [
-                oras, judet, tip_imobiliar, suprafata, etaj_final, 
-                camere, perioada_constructie, tip_imobiliar, tip_tranzactie
-            ] if x is not None)
+            id_raw = build_id_raw(
+                oras, judet, tip_imobiliar, suprafata, etaj_final,
+                camere, perioada_constructie, tip_tranzactie
+            )
             
             
             rezultate.append({

@@ -85,7 +85,6 @@ class Anunt(Base):
     an_constructie = Column(String(255)) # Valoarea brută (ex: "2020")
     compartimentare = Column(String(255))
     pret = Column(BigInteger, nullable=False)
-    URL_anunt = Column(String(500), nullable=True)
     data_publicare = Column(Date)
     id_sursa_raw = Column(String(255), ForeignKey('raw_data.id_raw'))
 
