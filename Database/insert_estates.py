@@ -26,13 +26,13 @@ def insert_estates(rezultate: list[dict]):
 
     # 2. INSERAREA EFECTIVA
     query = text("""INSERT INTO raw_data (
-            id_raw, "URL_anunt", judet, oras, suprafata, etaj, 
-            perioada_constructie, an_constructie, compartimentare, 
-            camere, tip_tranzactie, tip_imobiliar, platforma, pret, data, processed
+            id_raw, "URL_anunt", judet, oras, suprafata, etaj,
+            perioada_constructie, an_constructie, compartimentare,
+            camere, tip_tranzactie, tip_imobiliar, platforma, pret, data, processed, imagini_url
         ) VALUES (
-            :id_raw, :URL_anunt, :judet, :oras, :suprafata, :etaj, 
-            :perioada_constructie, :an_constructie, :compartimentare, 
-            :camere, :tip_tranzactie, :tip_imobiliar, :platforma, :pret, :data, :processed
+            :id_raw, :URL_anunt, :judet, :oras, :suprafata, :etaj,
+            :perioada_constructie, :an_constructie, :compartimentare,
+            :camere, :tip_tranzactie, :tip_imobiliar, :platforma, :pret, :data, :processed, :imagini_url
         )
         ON CONFLICT (id_raw) DO NOTHING;
     """)

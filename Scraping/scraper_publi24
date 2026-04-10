@@ -1,0 +1,55 @@
+from selenium import webdriver
+from selenium.webdriver.firefox.service import Service
+from webdriver_manager.firefox import GeckoDriverManager
+from bs4 import BeautifulSoup
+import pandas as pd
+import time
+from datetime import datetime
+import re
+
+def scrape_storia(url_start, tip_tranzactie, tip_imobiliar):
+    rezultate = []
+    links = []
+
+    driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()))
+    driver.get(url_start)
+    time.sleep(5) 
+
+    soup = BeautifulSoup(driver.page_source, 'lxml')
+    anunturi_imobiliare = soup.find_all('a', {'data-cy': 'listing-item-link'})
+    
+    for a in anunturi_imobiliare:
+        href = a.get("href")
+        links.append("https://www.storia.ro" + href)
+    links = list(set(links))
+
+    for link in links:
+        try:
+            driver.get(link)
+            time.sleep(2)
+            soup = BeautifulSoup(driver.page_source, 'lxml')
+            
+
+
+        except Exception as e:
+            print(f"Eroare la link-ul {link}: {e}")
+            continue
+            # 'id_raw': id_raw,
+            # 'URL_anunt': link,
+            # 'judet': judet,
+            # 'oras': oras,
+            # 'suprafata': suprafata,
+            # 'etaj': etaj,
+            # 'perioada_constructie': perioada_constructie,
+            # 'an_constructie': an_constructie,
+            # 'compartimentare': compartimentare,
+            # 'camere': camere,
+            # 'pret': pret,
+            # 'tip_tranzactie': tip_tranzactie,
+            # 'tip_imobiliar': tip_imobiliar,
+            # 'platforma': platforma,
+            # 'data': data,
+            # 'processed': processed})
+
+    driver.quit()
+    return rezultate

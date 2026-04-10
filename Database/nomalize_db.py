@@ -138,10 +138,29 @@ def normalize_db():
             );
             """,
 
-            # 9. Marcare Date ca Procesate
+            # 9. IMAGINI ANUNTURI
+            # Split the semicolon-separated URLs from raw_data into individual rows.
+            # unnest + string_to_array splits them; ordinality gives us the position (0-based).
             """
-            UPDATE raw_data 
-            SET processed = true 
+            INSERT INTO imagini_anunturi (id_anunt, url_imagine, ordine)
+            SELECT a.id_anunt, img.url, img.ordine - 1
+            FROM raw_data raw
+            JOIN anunturi a ON a.id_sursa_raw = raw.id_raw
+            CROSS JOIN LATERAL unnest(string_to_array(raw.imagini_url, ';'))
+                WITH ORDINALITY AS img(url, ordine)
+            WHERE raw.processed = false
+              AND raw.imagini_url IS NOT NULL
+              AND raw.imagini_url != ''
+              AND NOT EXISTS (
+                  SELECT 1 FROM imagini_anunturi ia
+                  WHERE ia.id_anunt = a.id_anunt AND ia.url_imagine = img.url
+              );
+            """,
+
+            # 10. Marcare Date ca Procesate
+            """
+            UPDATE raw_data
+            SET processed = true
             WHERE processed = false
             AND id_raw IN (
                 SELECT id_sursa_raw FROM anunturi);

@@ -21,7 +21,8 @@ class Estate(Base):
     platforma = Column(String(50), nullable=True)
     data = Column(Date, nullable=False)
     processed = Column(Boolean, nullable=False, default=False)
-    
+    imagini_url = Column(String(4000), nullable=False, default='')  # raw URLs, semicolon-separated
+
 class Judet(Base):
     __tablename__ = 'judete'
 
@@ -96,6 +97,7 @@ class Anunt(Base):
     compartimentare_ref = relationship("Compartimentare", back_populates="anunturi")
     istoric_anunturi = relationship("IstoricAnunt", back_populates="anunt_legatura", cascade="all, delete-orphan")
     sursa_raw = relationship("Estate")
+    imagini = relationship("ImagineAnunt", back_populates="anunt", cascade="all, delete-orphan")
 class IstoricAnunt(Base):
     __tablename__ = 'istoric_anunturi'
     id_istoric = Column(Integer, primary_key=True, autoincrement=True)
@@ -108,3 +110,13 @@ class IstoricAnunt(Base):
 
     # RELAȚIA BACK
     anunt_legatura = relationship("Anunt", back_populates="istoric_anunturi")
+
+class ImagineAnunt(Base):
+    __tablename__ = 'imagini_anunturi'
+
+    id_imagine = Column(Integer, primary_key=True, autoincrement=True)
+    id_anunt = Column(Integer, ForeignKey('anunturi.id_anunt'), nullable=False)
+    url_imagine = Column(String(1000), nullable=False)
+    ordine = Column(Integer, nullable=True)
+
+    anunt = relationship("Anunt", back_populates="imagini")

@@ -115,6 +115,17 @@ def scrape_storia(url_start, tip_tranzactie, tip_imobiliar):
                 text_descriere = container_descriere.get_text(separator=" ", strip=True)
                 compartimentare = clean_compartimentare(text_descriere)
 
+            # --- EXTRAGERE IMAGINI ---
+            imagini_url = []
+            gallery = soup.find('div', {'data-cy': 'mosaic-gallery-main-view'})
+            if gallery:
+                img_tags = gallery.find_all('img', class_=re.compile(r'el1rdii3'))
+                for img in img_tags:
+                    src = img.get('src', '')
+                    if src and 'apollo.olxcdn.com' in src:
+                        imagini_url.append(src)
+            imagini_url = list(dict.fromkeys(imagini_url))  # deduplicate, preserve order
+
             # --- EXTRAGERE PREȚ ---
             pret_element = soup.find('strong', {'data-cy': 'adPageHeaderPrice'})
             pret = clean_price(pret_element.get_text(strip=True) if pret_element else None)
@@ -147,7 +158,8 @@ def scrape_storia(url_start, tip_tranzactie, tip_imobiliar):
                 'tip_imobiliar': tip_imobiliar,
                 'platforma': platforma,
                 'data': data,
-                'processed': processed
+                'processed': processed,
+                'imagini_url': ';'.join(imagini_url) if imagini_url else ''
             })
             
             print(f"Anunț procesat cu succes: {link}, ID: {id_raw}, Oras: {oras}, Judet: {judet}, Suprafata: {suprafata}, Etaj: {etaj_final}, Camere: {camere}, Pret: {pret}, Tip tranzactie: {tip_tranzactie}, Tip imobiliar: {tip_imobiliar}, Platforma: {platforma}, Data: {data}, Compartimentare: {compartimentare}, Perioada constructie: {perioada_constructie}, an_constructie: {an_constructie}")

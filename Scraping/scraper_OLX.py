@@ -105,7 +105,18 @@ def scrape_olx():
                 camere = camere_element.text.split(':', 1)[1].strip()
 
             pret_element = soup.find('h3', class_='css-j7prh4')
-            pret = clean_price(pret_element.text if pret_element else None)     
+            pret = clean_price(pret_element.text if pret_element else None)
+
+            # --- EXTRAGERE IMAGINI ---
+            imagini_url = []
+            photo_slides = soup.find_all('div', {'data-testid': 'ad-photo'})
+            for slide in photo_slides:
+                img = slide.find('img', {'data-testid': 'swiper-image-lazy'})
+                if img:
+                    src = img.get('src', '')
+                    if src and 'apollo.olxcdn.com' in src:
+                        imagini_url.append(src)
+            imagini_url = list(dict.fromkeys(imagini_url))     
             
             
             
@@ -140,7 +151,8 @@ def scrape_olx():
             'tip_imobiliar': tip_imobiliar,
             'platforma': platforma,
             'data': data,
-            'processed': processed})
+            'processed': processed,
+            'imagini_url': ';'.join(imagini_url) if imagini_url else ''})
 
         print(id_raw, link, judet, oras, suprafata, etaj, perioada_constructie, an_constructie, compartimentare, camere, tip_tranzactie, tip_imobiliar, platforma, pret, data)
 

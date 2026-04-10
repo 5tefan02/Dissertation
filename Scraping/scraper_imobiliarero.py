@@ -137,6 +137,17 @@ def scrape_imobiliarero(url_start, tip_tranzactie):
                     except ValueError:
                         camere = camere
 
+            # --- EXTRAGERE IMAGINI ---
+            imagini_url = []
+            gallery = soup.find('div', class_=re.compile(r'gallery\b'))
+            if gallery:
+                img_tags = gallery.find_all('img', src=re.compile(r'roamcdn\.net.*gallery-main'))
+                for img in img_tags:
+                    src = img.get('src', '')
+                    if src and 'object-cover' not in (img.get('class') or []):
+                        imagini_url.append(src)
+            imagini_url = list(dict.fromkeys(imagini_url))
+
             label_pret = soup.find('div', {'aria-label': 'price'})
             pret = clean_price(label_pret.text if label_pret else None)
 
@@ -172,7 +183,8 @@ def scrape_imobiliarero(url_start, tip_tranzactie):
             'tip_imobiliar': tip_imobiliar,
             'platforma': platforma,
             'data': data,
-            'processed': processed})
+            'processed': processed,
+            'imagini_url': ';'.join(imagini_url) if imagini_url else ''})
         
         print(f"Anunț procesat: {link}, Oras: {oras}, Judet: {judet}, Suprafata: {suprafata}, Etaj: {etaj}, An constructie: {an_constructie}, Pret: {pret}, Tip tranzactie: {tip_tranzactie}, Tip imobiliar: {tip_imobiliar}, Platforma: {platforma}, Data: {data}, Compartimentare: {compartimentare}, Camere: {camere}, Perioada constructie: {perioada_constructie}")
     driver.quit()
